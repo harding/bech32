@@ -52,10 +52,13 @@ def bech32_create_checksum(hrp, data):
     polymod = bech32_polymod(values + [0, 0, 0, 0, 0, 0]) ^ 1
     return [(polymod >> 5 * (5 - i)) & 31 for i in range(6)]
 
+def implicit_len(data, trim=0):
+    return [(len(data) - trim) % 32] + data
 
 def bech32_encode(hrp, data):
     """Compute a Bech32 string given HRP and data values."""
-    combined = data + bech32_create_checksum(hrp, data)
+    checksum = bech32_create_checksum(hrp, implicit_len(data))
+    combined = data + checksum
     return hrp + '1' + ''.join([CHARSET[d] for d in combined])
 
 
@@ -72,7 +75,7 @@ def bech32_decode(bech):
         return (None, None)
     hrp = bech[:pos]
     data = [CHARSET.find(x) for x in bech[pos+1:]]
-    if not bech32_verify_checksum(hrp, data):
+    if not bech32_verify_checksum(hrp, implicit_len(data, trim=6)):
         return (None, None)
     return (hrp, data[:-6])
 
